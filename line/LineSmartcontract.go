@@ -47,8 +47,8 @@ type QueryResults struct {
 func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
 	lines := []Line{
 		{LineNumber: 1, WayStation: []string{"宁波", "杭州", "南京"}, WayStationType: []string{"始发站", "途径站", "终点站"}, Using: true},
-		{LineNumber: 1, WayStation: []string{"宁波", "杭州", "上海"}, WayStationType: []string{"始发站", "途径站", "终点站"}, Using: true},
-		{LineNumber: 1, WayStation: []string{"宁波", "嘉兴", "上海"}, WayStationType: []string{"始发站", "途径站", "终点站"}, Using: true},
+		{LineNumber: 2, WayStation: []string{"宁波", "杭州", "上海"}, WayStationType: []string{"始发站", "途径站", "终点站"}, Using: true},
+		{LineNumber: 3, WayStation: []string{"宁波", "嘉兴", "上海"}, WayStationType: []string{"始发站", "途径站", "终点站"}, Using: true},
 	}
 	for _, line := range lines {
 		lineJSON, err := json.Marshal(line)
@@ -131,7 +131,13 @@ func (s *SmartContract) DeleteLine(ctx contractapi.TransactionContextInterface, 
 			Msg:  fmt.Sprintf("the line %d does not exist", lineNumber),
 		}
 	}
-
+	err = ctx.GetStub().DelState(string(lineNumber))
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
 	return Result{
 		Code: 200,
 		Msg:  "",

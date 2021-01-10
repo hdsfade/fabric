@@ -131,6 +131,13 @@ func (s *SmartContract) DeleteVehicle(ctx contractapi.TransactionContextInterfac
 			Msg:  fmt.Sprintf("the vehicle %d does not exist", vehicleNumber),
 		}
 	}
+	err = ctx.GetStub().DelState(string(vehicleNumber))
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
 	return Result{
 		Code: 200,
 		Msg:  "",
