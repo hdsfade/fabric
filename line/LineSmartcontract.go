@@ -237,6 +237,14 @@ func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterfac
 		lines = append(lines, line)
 	}
 
+	if lines == nil {
+		return QueryResults{
+			Code: 402,
+			Msg:  err.Error(),
+			Data: emptylines,
+		}
+	}
+
 	return QueryResults{
 		Code: 200,
 		Msg:  "",
