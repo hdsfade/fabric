@@ -151,14 +151,24 @@ func (s *SmartContract) QueryLineBylinenumber(ctx contractapi.TransactionContext
 		return QueryResult{
 			Code: 402,
 			Msg:  fmt.Sprintf("failed to read from world state: %v", err),
-			Data: Line{},
+			Data: Line{
+				LineNumber:     0,
+				WayStation:     []string{},
+				WayStationType: []string{},
+				Using:          false,
+			},
 		}
 	}
 	if lineJSON == nil {
 		return QueryResult{
 			Code: 402,
 			Msg:  fmt.Sprintf("the lien %d does not exist", lineNumber),
-			Data: Line{},
+			Data: Line{
+				LineNumber:     0,
+				WayStation:     []string{},
+				WayStationType: []string{},
+				Using:          false,
+			},
 		}
 	}
 
@@ -168,7 +178,12 @@ func (s *SmartContract) QueryLineBylinenumber(ctx contractapi.TransactionContext
 		return QueryResult{
 			Code: 402,
 			Msg:  err.Error(),
-			Data: Line{},
+			Data: Line{
+				LineNumber:     0,
+				WayStation:     []string{},
+				WayStationType: []string{},
+				Using:          false,
+			},
 		}
 	}
 	return QueryResult{
