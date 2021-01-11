@@ -1,2 +1,2 @@
 # fabric
-The chaincode of the EU-train project.
+The chaincode of the EU-Chain-train project.
