@@ -232,7 +232,13 @@ func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterfac
 			WayStation:     []string{},
 			WayStationType: []string{},
 		})
+		return QueryResults{
+			Code: 402,
+			Msg:  "lines are empty.",
+			Data: lines,
+		}
 	}
+
 	return QueryResults{
 		Code: 200,
 		Msg:  "",
