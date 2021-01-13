@@ -196,7 +196,6 @@ func (s *SmartContract) QueryLineBylinenumber(ctx contractapi.TransactionContext
 // QueryAllLines returns all liness found in world state
 func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterface) QueryResults {
 	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
-	var emptylines Lines
 	if err != nil {
 		return QueryResults{
 			Code: 402,
@@ -228,15 +227,12 @@ func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterfac
 		}
 		lines = append(lines, line)
 	}
-
 	if lines == nil {
-		return QueryResults{
-			Code: 402,
-			Msg:  err.Error(),
-			Data: nil,
-		}
+		lines = append(lines, Line{
+			WayStation:     []string{},
+			WayStationType: []string{},
+		})
 	}
-
 	return QueryResults{
 		Code: 200,
 		Msg:  "",
