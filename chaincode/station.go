@@ -1,17 +1,12 @@
 //@author: hdsfade
-//@date: 2021-01-06-14:39
-package station
+//@date: 2021-01-13-21:44
+package chaincode
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
-
-// SmartContract provides functions for managing an Asset
-type SmartContract struct {
-	contractapi.Contract
-}
 
 //Station describes details of an station
 type Station struct {
@@ -23,52 +18,27 @@ type Station struct {
 
 type Stations []Station
 
-//Result structure used for handing result of create or delete
-type Result struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-}
-
 //QueryResult structure used for handing result of query
-type QueryResult struct {
+type StationQueryResult struct {
 	Code int     `json:"code"`
 	Msg  string  `json:"msg"`
 	Data Station `json:"data"`
 }
 
 //QueryResult structure used for handing result of queryAll
-type QueryResults struct {
+type StationQueryResults struct {
 	Code int      `json:"code"`
 	Msg  string   `json:"msg"`
 	Data Stations `json:"data"`
 }
 
-// Init stations' ledger(can add a default set of stations to the ledger)
-func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
-	stations := []Station{
-		{StationName: "上海", Country: "中国", Using: true, Describtion: ""},
-		{StationName: "北京", Country: "中国", Using: true, Describtion: ""},
-		{StationName: "广州", Country: "中国", Using: true, Describtion: ""},
-		{StationName: "杭州", Country: "中国", Using: true, Describtion: ""},
-		{StationName: "宁波", Country: "中国", Using: true, Describtion: ""},
-	}
-	for _, station := range stations {
-		stationJSON, err := json.Marshal(station)
-		if err != nil {
-			return err
-		}
-
-		err = ctx.GetStub().PutState(station.StationName, stationJSON)
-		if err != nil {
-			return nil
-		}
-	}
-	return nil
-}
-
 //StationExists judges a station if exists or not.
 func (s *SmartContract) StationExists(ctx contractapi.TransactionContextInterface, stationName string) (bool, error) {
-	stationJSON, err := ctx.GetStub().GetState(stationName)
+	stationIndexKey, err := ctx.GetStub().CreateCompositeKey(stationIndexName, []string{stationName})
+	if err != nil {
+		return false, fmt.Errorf("failed to read from world state %v", err)
+	}
+	stationJSON, err := ctx.GetStub().GetState(stationIndexKey)
 	if err != nil {
 		return false, fmt.Errorf("failed to read from world state %v", err)
 	}
@@ -77,6 +47,8 @@ func (s *SmartContract) StationExists(ctx contractapi.TransactionContextInterfac
 
 //CreateStation issues a new station to the world state with given details.
 func (s *SmartContract) CreateStation(ctx contractapi.TransactionContextInterface, stationName, country string, description string) Result {
+	stationIndexKey, err := ctx.GetStub().CreateCompositeKey(stationIndexName, []string{stationName})
+
 	exists, err := s.StationExists(ctx, stationName)
 	if err != nil {
 		return Result{
@@ -105,7 +77,7 @@ func (s *SmartContract) CreateStation(ctx contractapi.TransactionContextInterfac
 		}
 	}
 
-	err = ctx.GetStub().PutState(stationName, stationJSON)
+	err = ctx.GetStub().PutState(stationIndexKey, stationJSON)
 	if err != nil {
 		return Result{
 			Code: 402,
@@ -120,6 +92,7 @@ func (s *SmartContract) CreateStation(ctx contractapi.TransactionContextInterfac
 
 //DeleteStation deletes an station by stationName from the world state.
 func (s *SmartContract) DeleteStation(ctx contractapi.TransactionContextInterface, stationName string) Result {
+	stationIndexKey, err := ctx.GetStub().CreateCompositeKey(stationIndexName, []string{stationName})
 	exists, err := s.StationExists(ctx, stationName)
 	if err != nil {
 		return Result{
@@ -133,7 +106,40 @@ func (s *SmartContract) DeleteStation(ctx contractapi.TransactionContextInterfac
 			Msg:  fmt.Sprintf("the station %s does not exist", stationName),
 		}
 	}
-	err = ctx.GetStub().DelState(stationName)
+
+	stationResultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey("station~line", []string{stationName})
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	if stationResultsIterator.HasNext() == true {
+		var useStationLines string
+		for stationResultsIterator.HasNext() {
+			stationQueryResponse, err := stationResultsIterator.Next()
+			if err != nil {
+				return Result{
+					Code: 402,
+					Msg:  err.Error(),
+				}
+			}
+			_, compositeKeyParts, err := ctx.GetStub().SplitCompositeKey(stationQueryResponse.Key)
+			if err != nil {
+				return Result{
+					Code: 402,
+					Msg:  err.Error(),
+				}
+			}
+			useStationLines += compositeKeyParts[1][2:] + " "
+		}
+		return Result{
+			Code: 402,
+			Msg:  fmt.Sprintf("the station %s is used by lines %s", stationName, useStationLines),
+		}
+	}
+
+	err = ctx.GetStub().DelState(stationIndexKey)
 	if err != nil {
 		return Result{
 			Code: 402,
@@ -147,17 +153,26 @@ func (s *SmartContract) DeleteStation(ctx contractapi.TransactionContextInterfac
 }
 
 // QueryStationBystationname returns the station stored in the world state with given stationName
-func (s *SmartContract) QueryStationBystationname(ctx contractapi.TransactionContextInterface, stationName string) QueryResult {
-	stationJSON, err := ctx.GetStub().GetState(stationName)
+func (s *SmartContract) QueryStationBystationname(ctx contractapi.TransactionContextInterface, stationName string) StationQueryResult {
+	stationIndexKey, err := ctx.GetStub().CreateCompositeKey(stationIndexName, []string{stationName})
 	if err != nil {
-		return QueryResult{
+		return StationQueryResult{
+			Code: 402,
+			Msg:  fmt.Sprintf("failed to read from world state: %v", err),
+			Data: Station{},
+		}
+	}
+
+	stationJSON, err := ctx.GetStub().GetState(stationIndexKey)
+	if err != nil {
+		return StationQueryResult{
 			Code: 402,
 			Msg:  fmt.Sprintf("failed to read from world state: %v", err),
 			Data: Station{},
 		}
 	}
 	if stationJSON == nil {
-		return QueryResult{
+		return StationQueryResult{
 			Code: 402,
 			Msg:  fmt.Sprintf("the station %s does not exist", stationName),
 			Data: Station{},
@@ -167,13 +182,13 @@ func (s *SmartContract) QueryStationBystationname(ctx contractapi.TransactionCon
 	var station Station
 	err = json.Unmarshal(stationJSON, &station)
 	if err != nil {
-		return QueryResult{
+		return StationQueryResult{
 			Code: 402,
 			Msg:  err.Error(),
 			Data: Station{},
 		}
 	}
-	return QueryResult{
+	return StationQueryResult{
 		Code: 200,
 		Msg:  "",
 		Data: station,
@@ -181,22 +196,22 @@ func (s *SmartContract) QueryStationBystationname(ctx contractapi.TransactionCon
 }
 
 // QueryAllStations returns all stations found in world state
-func (s *SmartContract) QueryAllStations(ctx contractapi.TransactionContextInterface) QueryResults {
-	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+func (s *SmartContract) QueryAllStations(ctx contractapi.TransactionContextInterface) StationQueryResults {
+	stationResultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey(stationIndexName, []string{})
 	if err != nil {
-		return QueryResults{
+		return StationQueryResults{
 			Code: 402,
 			Msg:  err.Error(),
 			Data: Stations{},
 		}
 	}
-	defer resultsIterator.Close()
+	defer stationResultsIterator.Close()
 
 	var stations Stations
-	for resultsIterator.HasNext() {
-		queryResponse, err := resultsIterator.Next()
+	for stationResultsIterator.HasNext() {
+		stationQueryResponse, err := stationResultsIterator.Next()
 		if err != nil {
-			return QueryResults{
+			return StationQueryResults{
 				Code: 402,
 				Msg:  err.Error(),
 				Data: Stations{},
@@ -204,9 +219,9 @@ func (s *SmartContract) QueryAllStations(ctx contractapi.TransactionContextInter
 		}
 
 		var station Station
-		err = json.Unmarshal(queryResponse.Value, &station)
+		err = json.Unmarshal(stationQueryResponse.Value, &station)
 		if err != nil {
-			return QueryResults{
+			return StationQueryResults{
 				Code: 402,
 				Msg:  err.Error(),
 				Data: Stations{},
@@ -215,7 +230,15 @@ func (s *SmartContract) QueryAllStations(ctx contractapi.TransactionContextInter
 		stations = append(stations, station)
 	}
 
-	return QueryResults{
+	if stations == nil {
+		return StationQueryResults{
+			Code: 402,
+			Msg:  "No station",
+			Data: Stations{},
+		}
+	}
+
+	return StationQueryResults{
 		Code: 200,
 		Msg:  "",
 		Data: stations,
