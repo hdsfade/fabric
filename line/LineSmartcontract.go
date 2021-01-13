@@ -200,8 +200,8 @@ func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterfac
 	emptylines = []Line{
 		{
 			LineNumber:     0,
-			WayStation:     []string{},
-			WayStationType: []string{},
+			WayStation:     []string{""},
+			WayStationType: []string{""},
 			Using:          false,
 		},
 	}
