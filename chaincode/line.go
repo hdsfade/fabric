@@ -17,7 +17,9 @@ type Line struct {
 	Using          bool     `json:"using"`
 }
 
-type Lines []Line
+type Lines struct {
+	LinesData []Line `json:"lines"`
+}
 
 //QueryResult structure used for handing result of query
 type LineQueryResult struct {
@@ -124,7 +126,7 @@ func (s *SmartContract) CreateLine(ctx contractapi.TransactionContextInterface, 
 
 	return Result{
 		Code: 200,
-		Msg:  "",
+		Msg:  "success",
 	}
 }
 
@@ -180,7 +182,7 @@ func (s *SmartContract) DeleteLine(ctx contractapi.TransactionContextInterface, 
 	}
 	return Result{
 		Code: 200,
-		Msg:  "",
+		Msg:  "success",
 	}
 }
 
@@ -242,14 +244,14 @@ func (s *SmartContract) QueryLineBylinenumber(ctx contractapi.TransactionContext
 	}
 	return LineQueryResult{
 		Code: 200,
-		Msg:  "",
+		Msg:  "success",
 		Data: line,
 	}
 }
 
 // QueryAllLines returns all liness found in world state
 func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterface) LineQueryResults {
-	var emptylines Lines
+	var emptylines []Line
 	emptylines = append(emptylines, Line{
 		LineNumber:     0,
 		WayStation:     []string{},
@@ -262,19 +264,19 @@ func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterfac
 		return LineQueryResults{
 			Code: 402,
 			Msg:  err.Error(),
-			Data: emptylines,
+			Data: Lines{LinesData: emptylines},
 		}
 	}
 	defer lineResultsIterator.Close()
 
-	var lines Lines
+	var lines []Line
 	for lineResultsIterator.HasNext() {
 		lineQueryResponse, err := lineResultsIterator.Next()
 		if err != nil {
 			return LineQueryResults{
 				Code: 402,
 				Msg:  err.Error(),
-				Data: emptylines,
+				Data: Lines{LinesData: emptylines},
 			}
 		}
 
@@ -284,7 +286,7 @@ func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterfac
 			return LineQueryResults{
 				Code: 402,
 				Msg:  err.Error(),
-				Data: emptylines,
+				Data: Lines{LinesData: emptylines},
 			}
 		}
 		lines = append(lines, line)
@@ -293,13 +295,13 @@ func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterfac
 		return LineQueryResults{
 			Code: 402,
 			Msg:  "No line",
-			Data: emptylines,
+			Data: Lines{LinesData: emptylines},
 		}
 	}
 
 	return LineQueryResults{
 		Code: 200,
-		Msg:  "",
-		Data: lines,
+		Msg:  "success",
+		Data: Lines{LinesData: lines},
 	}
 }

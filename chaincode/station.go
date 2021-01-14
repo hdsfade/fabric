@@ -16,7 +16,9 @@ type Station struct {
 	Describtion string `json:"describtion"`
 }
 
-type Stations []Station
+type Stations struct {
+	StationsData []Station `json:"stations"`
+}
 
 //QueryResult structure used for handing result of query
 type StationQueryResult struct {
@@ -86,7 +88,7 @@ func (s *SmartContract) CreateStation(ctx contractapi.TransactionContextInterfac
 	}
 	return Result{
 		Code: 200,
-		Msg:  "",
+		Msg:  "success",
 	}
 }
 
@@ -131,11 +133,11 @@ func (s *SmartContract) DeleteStation(ctx contractapi.TransactionContextInterfac
 					Msg:  err.Error(),
 				}
 			}
-			useStationLines += compositeKeyParts[1][2:] + " "
+			useStationLines += compositeKeyParts[1] + " "
 		}
 		return Result{
 			Code: 402,
-			Msg:  fmt.Sprintf("the station %s is used by lines %s", stationName, useStationLines),
+			Msg:  fmt.Sprintf("the station %s is used by lines %v", stationName, useStationLines),
 		}
 	}
 
@@ -148,7 +150,7 @@ func (s *SmartContract) DeleteStation(ctx contractapi.TransactionContextInterfac
 	}
 	return Result{
 		Code: 200,
-		Msg:  "",
+		Msg:  "success",
 	}
 }
 
@@ -190,7 +192,7 @@ func (s *SmartContract) QueryStationBystationname(ctx contractapi.TransactionCon
 	}
 	return StationQueryResult{
 		Code: 200,
-		Msg:  "",
+		Msg:  "success",
 		Data: station,
 	}
 }
@@ -202,19 +204,19 @@ func (s *SmartContract) QueryAllStations(ctx contractapi.TransactionContextInter
 		return StationQueryResults{
 			Code: 402,
 			Msg:  err.Error(),
-			Data: Stations{},
+			Data: Stations{StationsData: []Station{}},
 		}
 	}
 	defer stationResultsIterator.Close()
 
-	var stations Stations
+	var stations []Station
 	for stationResultsIterator.HasNext() {
 		stationQueryResponse, err := stationResultsIterator.Next()
 		if err != nil {
 			return StationQueryResults{
 				Code: 402,
 				Msg:  err.Error(),
-				Data: Stations{},
+				Data: Stations{StationsData: []Station{}},
 			}
 		}
 
@@ -224,7 +226,7 @@ func (s *SmartContract) QueryAllStations(ctx contractapi.TransactionContextInter
 			return StationQueryResults{
 				Code: 402,
 				Msg:  err.Error(),
-				Data: Stations{},
+				Data: Stations{StationsData: []Station{}},
 			}
 		}
 		stations = append(stations, station)
@@ -234,13 +236,13 @@ func (s *SmartContract) QueryAllStations(ctx contractapi.TransactionContextInter
 		return StationQueryResults{
 			Code: 402,
 			Msg:  "No station",
-			Data: Stations{},
+			Data: Stations{StationsData: []Station{}},
 		}
 	}
 
 	return StationQueryResults{
 		Code: 200,
-		Msg:  "",
-		Data: stations,
+		Msg:  "success",
+		Data: Stations{StationsData: stations},
 	}
 }

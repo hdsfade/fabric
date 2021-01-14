@@ -16,7 +16,9 @@ type Vehicle struct { //车辆
 	Using         bool `json:"using"`
 }
 
-type Vehicles []Vehicle
+type Vehicles struct {
+	VehiclesData []Vehicle `json:"vehicles"`
+}
 
 //VehicleQueryResult structure used for handing result of query vehicle
 type VehicleQueryResult struct {
@@ -77,12 +79,6 @@ func (s *SmartContract) CreateVehicle(ctx contractapi.TransactionContextInterfac
 		}
 	}
 
-	if err != nil {
-		return Result{
-			Code: 402,
-			Msg:  err.Error(),
-		}
-	}
 	err = ctx.GetStub().PutState(vehicleIndexKey, vehicleJSON)
 	if err != nil {
 		return Result{
@@ -92,7 +88,7 @@ func (s *SmartContract) CreateVehicle(ctx contractapi.TransactionContextInterfac
 	}
 	return Result{
 		Code: 200,
-		Msg:  "",
+		Msg:  "success",
 	}
 }
 
@@ -122,13 +118,13 @@ func (s *SmartContract) DeleteVehicle(ctx contractapi.TransactionContextInterfac
 	}
 	return Result{
 		Code: 200,
-		Msg:  "",
+		Msg:  "success",
 	}
 }
 
 // QueryVehicleByvehiclenumber returns the vehicles stored in the world state with given vehicleNumber
 func (s *SmartContract) QueryVehicleByvehiclenumber(ctx contractapi.TransactionContextInterface, vehicleNumber int) VehicleQueryResult {
-	vehicleIndexKey, err := ctx.GetStub().CreateCompositeKey(vehicleIndexName, []string{string(vehicleNumber)})
+	vehicleIndexKey, err := ctx.GetStub().CreateCompositeKey(vehicleIndexName, []string{strconv.Itoa(vehicleNumber)})
 	if err != nil {
 		return VehicleQueryResult{
 			Code: 402,
@@ -164,7 +160,7 @@ func (s *SmartContract) QueryVehicleByvehiclenumber(ctx contractapi.TransactionC
 	}
 	return VehicleQueryResult{
 		Code: 200,
-		Msg:  "",
+		Msg:  "success",
 		Data: vehicle,
 	}
 }
@@ -176,19 +172,19 @@ func (s *SmartContract) QueryAllVehicles(ctx contractapi.TransactionContextInter
 		return VehicleQueryResults{
 			Code: 402,
 			Msg:  err.Error(),
-			Data: Vehicles{},
+			Data: Vehicles{VehiclesData: []Vehicle{}},
 		}
 	}
 	defer vehicleResultsIterator.Close()
 
-	var vehicles Vehicles
+	var vehicles []Vehicle
 	for vehicleResultsIterator.HasNext() {
 		vehicleQueryResponse, err := vehicleResultsIterator.Next()
 		if err != nil {
 			return VehicleQueryResults{
 				Code: 402,
 				Msg:  err.Error(),
-				Data: Vehicles{},
+				Data: Vehicles{VehiclesData: []Vehicle{}},
 			}
 		}
 
@@ -198,7 +194,7 @@ func (s *SmartContract) QueryAllVehicles(ctx contractapi.TransactionContextInter
 			return VehicleQueryResults{
 				Code: 402,
 				Msg:  err.Error(),
-				Data: Vehicles{},
+				Data: Vehicles{VehiclesData: []Vehicle{}},
 			}
 		}
 		vehicles = append(vehicles, vehicle)
@@ -207,12 +203,12 @@ func (s *SmartContract) QueryAllVehicles(ctx contractapi.TransactionContextInter
 		return VehicleQueryResults{
 			Code: 402,
 			Msg:  "No vehicle",
-			Data: Vehicles{},
+			Data: Vehicles{VehiclesData: []Vehicle{}},
 		}
 	}
 	return VehicleQueryResults{
 		Code: 200,
-		Msg:  "",
-		Data: vehicles,
+		Msg:  "success",
+		Data: Vehicles{VehiclesData: vehicles},
 	}
 }
