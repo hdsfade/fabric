@@ -109,6 +109,39 @@ func (s *SmartContract) DeleteVehicle(ctx contractapi.TransactionContextInterfac
 		}
 	}
 
+	//if the vehicle is used by some schedules, the vehicle couldn't be delete.
+	vehicleResultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey(vehiclescheduleIndexName, []string{strconv.Itoa(vehicleNumber)})
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	if vehicleResultsIterator.HasNext() == true {
+		var useVehicleSchedules string
+		for vehicleResultsIterator.HasNext() {
+			vehicleQueryResponse, err := vehicleResultsIterator.Next()
+			if err != nil {
+				return Result{
+					Code: 402,
+					Msg:  err.Error(),
+				}
+			}
+			_, compositeKeyParts, err := ctx.GetStub().SplitCompositeKey(vehicleQueryResponse.Key)
+			if err != nil {
+				return Result{
+					Code: 402,
+					Msg:  err.Error(),
+				}
+			}
+			useVehicleSchedules += compositeKeyParts[1] + " "
+		}
+		return Result{
+			Code: 402,
+			Msg:  fmt.Sprintf("the vehicle %d is used by schedules %s", vehicleNumber, useVehicleSchedules),
+		}
+	}
+
 	err = ctx.GetStub().DelState(vehicleIndexKey)
 	if err != nil {
 		return Result{

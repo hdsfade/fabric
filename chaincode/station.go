@@ -109,7 +109,7 @@ func (s *SmartContract) DeleteStation(ctx contractapi.TransactionContextInterfac
 		}
 	}
 
-	stationResultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey("station~line", []string{stationName})
+	stationResultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey(stationlineIndexName, []string{stationName})
 	if err != nil {
 		return Result{
 			Code: 402,

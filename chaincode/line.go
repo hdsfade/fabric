@@ -21,21 +21,21 @@ type Lines struct {
 	LinesData []Line `json:"lines"`
 }
 
-//QueryResult structure used for handing result of query
+//LineQueryResult structure used for handing result of query
 type LineQueryResult struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data Line   `json:"data"`
 }
 
-//QueryResult structure used for handing result of queryAll
+//LineQueryResults structure used for handing result of queryAll
 type LineQueryResults struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data Lines  `json:"data"`
 }
 
-//LineExists judges a  if exists or not.
+//LineExists judges a line if exists or not.
 func (s *SmartContract) LineExists(ctx contractapi.TransactionContextInterface, lineNumber int) (bool, error) {
 	lineIndexKey, err := ctx.GetStub().CreateCompositeKey(lineIndexName, []string{strconv.Itoa(lineNumber)})
 	if err != nil {
@@ -52,6 +52,12 @@ func (s *SmartContract) LineExists(ctx contractapi.TransactionContextInterface, 
 //CreateLine issues a new line to the world state with given details.
 func (s *SmartContract) CreateLine(ctx contractapi.TransactionContextInterface, lineNumber int, wayStation, wayStationType []string) Result {
 	lineIndexKey, err := ctx.GetStub().CreateCompositeKey(lineIndexName, []string{strconv.Itoa(lineNumber)})
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
 
 	exists, err := s.LineExists(ctx, lineNumber)
 	if err != nil {
@@ -108,14 +114,14 @@ func (s *SmartContract) CreateLine(ctx contractapi.TransactionContextInterface, 
 	//create compositekey station~line
 	value := []byte{0x00}
 	for _, stationName := range line.WayStation {
-		stationLineIndexKey, err := ctx.GetStub().CreateCompositeKey(stationlineIndexName, []string{stationName, strconv.Itoa(line.LineNumber)})
+		stationlineIndexKey, err := ctx.GetStub().CreateCompositeKey(stationlineIndexName, []string{stationName, strconv.Itoa(line.LineNumber)})
 		if err != nil {
 			return Result{
 				Code: 402,
 				Msg:  err.Error(),
 			}
 		}
-		err = ctx.GetStub().PutState(stationLineIndexKey, value)
+		err = ctx.GetStub().PutState(stationlineIndexKey, value)
 		if err != nil {
 			return Result{
 				Code: 402,
@@ -133,6 +139,13 @@ func (s *SmartContract) CreateLine(ctx contractapi.TransactionContextInterface, 
 //DeleteLine deletes a line by lineNumber from the world state.
 func (s *SmartContract) DeleteLine(ctx contractapi.TransactionContextInterface, lineNumber int) Result {
 	lineIndexKey, err := ctx.GetStub().CreateCompositeKey(lineIndexName, []string{strconv.Itoa(lineNumber)})
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+
 	exists, err := s.LineExists(ctx, lineNumber)
 	if err != nil {
 		return Result{
@@ -146,6 +159,40 @@ func (s *SmartContract) DeleteLine(ctx contractapi.TransactionContextInterface, 
 			Msg:  fmt.Sprintf("the line %d does not exist", lineNumber),
 		}
 	}
+
+	//if the line is used by some schedules, the line couldn't be delete.
+	lineResultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey(linescheduleIndexName, []string{strconv.Itoa(lineNumber)})
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	if lineResultsIterator.HasNext() == true {
+		var useLineSchedules string
+		for lineResultsIterator.HasNext() {
+			lineQueryResponse, err := lineResultsIterator.Next()
+			if err != nil {
+				return Result{
+					Code: 402,
+					Msg:  err.Error(),
+				}
+			}
+			_, compositeKeyParts, err := ctx.GetStub().SplitCompositeKey(lineQueryResponse.Key)
+			if err != nil {
+				return Result{
+					Code: 402,
+					Msg:  err.Error(),
+				}
+			}
+			useLineSchedules += compositeKeyParts[1] + " "
+		}
+		return Result{
+			Code: 402,
+			Msg:  fmt.Sprintf("the line %d is used by schedules %s", lineNumber, useLineSchedules),
+		}
+	}
+
 	lineJSON, err := ctx.GetStub().GetState(lineIndexKey)
 	var line Line
 	err = json.Unmarshal(lineJSON, &line)
@@ -249,7 +296,7 @@ func (s *SmartContract) QueryLineBylinenumber(ctx contractapi.TransactionContext
 	}
 }
 
-// QueryAllLines returns all liness found in world state
+// QueryAllLines returns all lines found in world state
 func (s *SmartContract) QueryAllLines(ctx contractapi.TransactionContextInterface) LineQueryResults {
 	var emptylines []Line
 	emptylines = append(emptylines, Line{
