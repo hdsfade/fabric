@@ -362,12 +362,13 @@ func (s *SmartContract) QueryAllSchedules(ctx contractapi.TransactionContextInte
 			}
 		}
 		schedules = append(schedules, schedule)
-		if schedules == nil {
-			return ScheduleQueryResults{
-				Code: 402,
-				Msg:  "No schedule",
-				Data: Schedules{ScheduleData: emptyschedules},
-			}
+	}
+
+	if schedules == nil {
+		return ScheduleQueryResults{
+			Code: 402,
+			Msg:  "No schedule",
+			Data: Schedules{ScheduleData: emptyschedules},
 		}
 	}
 

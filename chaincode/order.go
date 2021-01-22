@@ -292,11 +292,11 @@ func (s *SmartContract) QueryAllOrders(ctx contractapi.TransactionContextInterfa
 	var emptyorders []Order
 	emptyorders = append(emptyorders, Order{
 		OrderId:            0,
-		GenerateTime:       "",
+		GenerateTime:       " ",
 		CustomerId:         0,
 		TrainNumber:        0,
-		StartingStation:    "",
-		DestinationStation: "",
+		StartingStation:    " ",
+		DestinationStation: " ",
 		CarriageNumber:     0,
 		Price:              0,
 		TotalTypeNum:       0,
@@ -304,7 +304,7 @@ func (s *SmartContract) QueryAllOrders(ctx contractapi.TransactionContextInterfa
 		GoodsNum:           []int{},
 		GoodsName:          []string{},
 		CheckResult:        false,
-		CheckDescription:   "",
+		CheckDescription:   " ",
 	})
 
 	orderResultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey(orderIndexName, []string{})
@@ -342,7 +342,7 @@ func (s *SmartContract) QueryAllOrders(ctx contractapi.TransactionContextInterfa
 	if orders == nil {
 		return OrderQueryResults{
 			Code: 402,
-			Msg:  err.Error(),
+			Msg:  "No order",
 			Data: Orders{OrdersData: emptyorders},
 		}
 	}

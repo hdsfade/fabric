@@ -254,12 +254,13 @@ func (s *SmartContract) QueryAllTrains(ctx contractapi.TransactionContextInterfa
 			}
 		}
 		trains = append(trains, train)
-		if trains == nil {
-			return TrainQueryResults{
-				Code: 402,
-				Msg:  err.Error(),
-				Data: Trains{TrainsDate: emptytrains},
-			}
+	}
+
+	if trains == nil {
+		return TrainQueryResults{
+			Code: 402,
+			Msg:  "No train",
+			Data: Trains{TrainsDate: emptytrains},
 		}
 	}
 
