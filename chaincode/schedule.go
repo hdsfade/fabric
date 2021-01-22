@@ -94,7 +94,7 @@ func (s *SmartContract) CreateSchedule(ctx contractapi.TransactionContextInterfa
 	}
 
 	//if the vehicle vehicleNumber does not exist, the schedule couldn't be created
-	exists, err = s.LineExists(ctx, vehicleNumber)
+	exists, err = s.VehicleExists(ctx, vehicleNumber)
 	if err != nil {
 		return Result{
 			Code: 402,
