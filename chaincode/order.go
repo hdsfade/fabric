@@ -11,13 +11,14 @@ import (
 )
 
 var orderIndexName = "order"
+var trainorderIndexName = "train~order"
 
 //Order describes details of a order
 type Order struct { //订单
 	OrderId            int      `json:"orderId"`
 	GenerateTime       string   `json:"generateTime"`
 	CustomerId         int      `json:"customerId"`
-	TrainNumber        int      `json:"trainNumber"`
+	TrainNumber        string   `json:"trainNumber"`
 	StartingStation    string   `json:"startingStation"`
 	DestinationStation string   `json:"destinationStation"`
 	CarriageNumber     int      `json:"carriageNumber"`
@@ -62,10 +63,10 @@ func (s *SmartContract) OrderExists(ctx contractapi.TransactionContextInterface,
 	return orderJSON != nil, nil
 }
 
-//CreateOrder issues a new line to the world state with given details.
-func (s *SmartContract) CreateOrder(ctx contractapi.TransactionContextInterface, orderId, customerId, trainNumber int,
+//CreateOrder issues a new order to the world state with given details.
+func (s *SmartContract) CreateOrder(ctx contractapi.TransactionContextInterface, orderId, customerId int, trainNumber string,
 	startingStation, destinationStation string, carriageNumber, price, totalTypeNum int, cargoType []string, goodsNumber []int,
-	goodsName []string, checkResult bool, checkDescription string) Result {
+	goodsName []string) Result {
 	orderIndexKey, err := ctx.GetStub().CreateCompositeKey(orderIndexName, []string{strconv.Itoa(orderId)})
 	if err != nil {
 		return Result{
@@ -88,7 +89,7 @@ func (s *SmartContract) CreateOrder(ctx contractapi.TransactionContextInterface,
 		}
 	}
 
-	//if the train trainNumber does not exist, the order couldn't be cteated
+	//if the train trainNumber does not exist, the order couldn't be created
 	exists, err = s.TrainExists(ctx, trainNumber)
 	if err != nil {
 		return Result{
@@ -99,7 +100,7 @@ func (s *SmartContract) CreateOrder(ctx contractapi.TransactionContextInterface,
 	if exists == false {
 		return Result{
 			Code: 402,
-			Msg:  fmt.Sprintf("the train %d does not exist", trainNumber),
+			Msg:  fmt.Sprintf("the train %s does not exist", trainNumber),
 		}
 	}
 
@@ -110,7 +111,7 @@ func (s *SmartContract) CreateOrder(ctx contractapi.TransactionContextInterface,
 
 	order := Order{
 		OrderId:            orderId,
-		GenerateTime:       time.Now().Format("2006-01-02 15:04:05"),
+		GenerateTime:       time.Now().Format("2006-01-02"),
 		CustomerId:         customerId,
 		TrainNumber:        trainNumber,
 		StartingStation:    startingStation,
@@ -121,8 +122,8 @@ func (s *SmartContract) CreateOrder(ctx contractapi.TransactionContextInterface,
 		CargoType:          cargoType,
 		GoodsNum:           goodsNumber,
 		GoodsName:          goodsName,
-		CheckResult:        checkResult,
-		CheckDescription:   checkDescription,
+		CheckResult:        false,
+		CheckDescription:   " ",
 	}
 	orderJSON, err := json.Marshal(order)
 	if err != nil {
@@ -133,6 +134,24 @@ func (s *SmartContract) CreateOrder(ctx contractapi.TransactionContextInterface,
 	}
 
 	err = ctx.GetStub().PutState(orderIndexKey, orderJSON)
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+
+	value := []byte{0x00}
+	//create compositekey train~order
+	trainorderIndexKey, err := ctx.GetStub().CreateCompositeKey(
+		trainorderIndexName, []string{trainNumber, strconv.Itoa(orderId)})
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	err = ctx.GetStub().PutState(trainorderIndexKey, value)
 	if err != nil {
 		return Result{
 			Code: 402,
@@ -183,18 +202,77 @@ func (s *SmartContract) DeleteOrder(ctx contractapi.TransactionContextInterface,
 	}
 }
 
+//UpdateOrder updates an existing order in the world state with provided parameters
+func (s *SmartContract) UpdateOrder(ctx contractapi.TransactionContextInterface, orderId int, checkRsult bool, checkDescription string) Result {
+	orderIndexkey, err := ctx.GetStub().CreateCompositeKey(orderIndexName, []string{strconv.Itoa(orderId)})
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	orderJSON, err := ctx.GetStub().GetState(orderIndexkey)
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	if orderJSON == nil {
+		return Result{
+			Code: 402,
+			Msg:  fmt.Sprintf("the order %d does not exist", orderId),
+		}
+	}
+
+	var order Order
+	err = json.Unmarshal(orderJSON, &order)
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	//overwriting original checkResult and checkDescription
+	order.CheckResult = checkRsult
+	order.CheckDescription = checkDescription
+	orderJSON, err = json.Marshal(order)
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	err = ctx.GetStub().PutState(orderIndexkey, orderJSON)
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	return Result{
+		Code: 200,
+		Msg:  "success",
+	}
+}
+
+// CheckOrder updates order's checkResult and checkDescription
+func (s *SmartContract) CheckOrder(ctx contractapi.TransactionContextInterface, orderId int, checkResult bool, checkDescription string) Result {
+	return s.UpdateOrder(ctx, orderId, checkResult, checkDescription)
+}
+
 //QueryOrderByorderid returns the order in the world state with given orderId
 func (s *SmartContract) QueryOrderByorderid(ctx contractapi.TransactionContextInterface, orderId int) OrderQueryResult {
 	orderIndexKey, err := ctx.GetStub().CreateCompositeKey(orderIndexName, []string{strconv.Itoa(orderId)})
 	if err != nil {
 		return OrderQueryResult{
 			Code: 402,
-			Msg:  fmt.Sprintf("failed to read from world state: %v", err),
+			Msg:  err.Error(),
 			Data: Order{
 				OrderId:            0,
 				GenerateTime:       "",
 				CustomerId:         0,
-				TrainNumber:        0,
+				TrainNumber:        "0",
 				StartingStation:    "",
 				DestinationStation: "",
 				CarriageNumber:     0,
@@ -218,7 +296,7 @@ func (s *SmartContract) QueryOrderByorderid(ctx contractapi.TransactionContextIn
 				OrderId:            0,
 				GenerateTime:       "",
 				CustomerId:         0,
-				TrainNumber:        0,
+				TrainNumber:        "0",
 				StartingStation:    "",
 				DestinationStation: "",
 				CarriageNumber:     0,
@@ -240,7 +318,7 @@ func (s *SmartContract) QueryOrderByorderid(ctx contractapi.TransactionContextIn
 				OrderId:            0,
 				GenerateTime:       "",
 				CustomerId:         0,
-				TrainNumber:        0,
+				TrainNumber:        "0",
 				StartingStation:    "",
 				DestinationStation: "",
 				CarriageNumber:     0,
@@ -265,7 +343,7 @@ func (s *SmartContract) QueryOrderByorderid(ctx contractapi.TransactionContextIn
 				OrderId:            0,
 				GenerateTime:       "",
 				CustomerId:         0,
-				TrainNumber:        0,
+				TrainNumber:        "0",
 				StartingStation:    "",
 				DestinationStation: "",
 				CarriageNumber:     0,
@@ -294,7 +372,7 @@ func (s *SmartContract) QueryAllOrders(ctx contractapi.TransactionContextInterfa
 		OrderId:            0,
 		GenerateTime:       " ",
 		CustomerId:         0,
-		TrainNumber:        0,
+		TrainNumber:        "0",
 		StartingStation:    " ",
 		DestinationStation: " ",
 		CarriageNumber:     0,

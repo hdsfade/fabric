@@ -132,7 +132,7 @@ func (s *SmartContract) CreateSchedule(ctx contractapi.TransactionContextInterfa
 	}
 
 	value := []byte{0x00}
-	//create compositekey schedule~line
+	//create compositekey line~schedule
 	linescheduleIndexKey, err := ctx.GetStub().CreateCompositeKey(
 		linescheduleIndexName, []string{strconv.Itoa(lineNumber), strconv.Itoa(scheduleNumber)})
 	if err != nil {
@@ -149,7 +149,7 @@ func (s *SmartContract) CreateSchedule(ctx contractapi.TransactionContextInterfa
 		}
 	}
 
-	//create compositekey schedule-vehicle
+	//create compositekey vehicle~schedule
 	vehiclescheduleIndexKey, err := ctx.GetStub().CreateCompositeKey(
 		vehiclescheduleIndexName, []string{strconv.Itoa(vehicleNumber), strconv.Itoa(scheduleNumber)})
 	if err != nil {
@@ -196,7 +196,7 @@ func (s *SmartContract) DeleteSchedule(ctx contractapi.TransactionContextInterfa
 		}
 	}
 
-	scheduleJSON, err := ctx.GetStub().GetState(strconv.Itoa(scheduleNumber))
+	scheduleJSON, err := ctx.GetStub().GetState(scheduleIndexKey)
 	var schedule Schedule
 	err = json.Unmarshal(scheduleJSON, &schedule)
 	if err != nil {
@@ -303,7 +303,7 @@ func (s *SmartContract) QueryScheduleByschedulenumber(ctx contractapi.Transactio
 	if err != nil {
 		return ScheduleQueryResult{
 			Code: 402,
-			Msg:  fmt.Sprintf("the scheduel %d does not exist", scheduleNumber),
+			Msg:  err.Error(),
 			Data: Schedule{
 				ScheduleNumber: 0,
 				LineNumber:     0,

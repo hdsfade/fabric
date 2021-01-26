@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
-	"strconv"
 )
 
 var trainIndexName = "train"
@@ -14,8 +13,8 @@ var trainOrderIndexName = "train~order"
 
 //Train describe details of a train
 type Train struct {
-	TrainNumber  int `json:"trainNumber"`
-	CarriageLeft int `json:"carriageLeft"`
+	TrainNumber  string `json:"trainNumber"`
+	CarriageLeft int    `json:"carriageLeft"`
 }
 
 type Trains struct {
@@ -37,8 +36,8 @@ type TrainQueryResults struct {
 }
 
 //TrainExists judges a schedule if exists or not
-func (s *SmartContract) TrainExists(ctx contractapi.TransactionContextInterface, trainNumber int) (bool, error) {
-	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{strconv.Itoa(trainNumber)})
+func (s *SmartContract) TrainExists(ctx contractapi.TransactionContextInterface, trainNumber string) (bool, error) {
+	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{trainNumber})
 	if err != nil {
 		return false, fmt.Errorf("failed to read from world state %v", err)
 	}
@@ -51,8 +50,8 @@ func (s *SmartContract) TrainExists(ctx contractapi.TransactionContextInterface,
 }
 
 //CreateTrain issues a new schedule to the world state with given details
-func (s *SmartContract) CreateTrain(ctx contractapi.TransactionContextInterface, trainNumber, carriageLeft int) Result {
-	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{strconv.Itoa(trainNumber)})
+func (s *SmartContract) CreateTrain(ctx contractapi.TransactionContextInterface, trainNumber string, carriageLeft int) Result {
+	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{trainNumber})
 	if err != nil {
 		return Result{
 			Code: 402,
@@ -69,7 +68,7 @@ func (s *SmartContract) CreateTrain(ctx contractapi.TransactionContextInterface,
 	if exists {
 		return Result{
 			Code: 402,
-			Msg:  fmt.Sprintf("the train %d already exists", trainNumber),
+			Msg:  fmt.Sprintf("the train %s already exists", trainNumber),
 		}
 	}
 
@@ -100,8 +99,8 @@ func (s *SmartContract) CreateTrain(ctx contractapi.TransactionContextInterface,
 }
 
 //UpdateTrain updates an existing train in the world state with provided parameters
-func (s *SmartContract) UpdateTrain(ctx contractapi.TransactionContextInterface, trainNumber, carriageNumber int) Result {
-	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{strconv.Itoa(trainNumber)})
+func (s *SmartContract) UpdateTrain(ctx contractapi.TransactionContextInterface, trainNumber string, carriageNumber int) Result {
+	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{trainNumber})
 	if err != nil {
 		return Result{
 			Code: 402,
@@ -118,7 +117,7 @@ func (s *SmartContract) UpdateTrain(ctx contractapi.TransactionContextInterface,
 	if trainJSON == nil {
 		return Result{
 			Code: 402,
-			Msg:  fmt.Sprintf("the train %d does not exist", trainNumber),
+			Msg:  fmt.Sprintf("the train %s does not exist", trainNumber),
 		}
 	}
 
@@ -133,7 +132,7 @@ func (s *SmartContract) UpdateTrain(ctx contractapi.TransactionContextInterface,
 	if train.CarriageLeft < carriageNumber {
 		return Result{
 			Code: 402,
-			Msg: fmt.Sprintf("the train %d's carriageLeft is not enough: carriageLeft %d, carraigeNumber %d",
+			Msg: fmt.Sprintf("the train %s's carriageLeft is not enough: carriageLeft %d, carraigeNumber %d",
 				trainNumber, train.CarriageLeft, carriageNumber),
 		}
 	}
@@ -161,14 +160,14 @@ func (s *SmartContract) UpdateTrain(ctx contractapi.TransactionContextInterface,
 }
 
 //QueryTrainBytrainnumber returns the train in the world state with given trainNumber
-func (s *SmartContract) QueryTrainBytrainnumber(ctx contractapi.TransactionContextInterface, trainNumber int) TrainQueryResult {
-	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{strconv.Itoa(trainNumber)})
+func (s *SmartContract) QueryTrainBytrainnumber(ctx contractapi.TransactionContextInterface, trainNumber string) TrainQueryResult {
+	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{trainNumber})
 	if err != nil {
 		return TrainQueryResult{
 			Code: 402,
 			Msg:  fmt.Sprintf("failed to read from world state: %v", err),
 			Data: Train{
-				TrainNumber:  0,
+				TrainNumber:  "0",
 				CarriageLeft: 0,
 			},
 		}
@@ -180,7 +179,7 @@ func (s *SmartContract) QueryTrainBytrainnumber(ctx contractapi.TransactionConte
 			Code: 402,
 			Msg:  fmt.Sprintf("failed to read from world state: %v", err),
 			Data: Train{
-				TrainNumber:  0,
+				TrainNumber:  "0",
 				CarriageLeft: 0,
 			},
 		}
@@ -188,9 +187,9 @@ func (s *SmartContract) QueryTrainBytrainnumber(ctx contractapi.TransactionConte
 	if trainJSON == nil {
 		return TrainQueryResult{
 			Code: 402,
-			Msg:  fmt.Sprintf("the train %d does not exist", trainNumber),
+			Msg:  fmt.Sprintf("the train %s does not exist", trainNumber),
 			Data: Train{
-				TrainNumber:  0,
+				TrainNumber:  "0",
 				CarriageLeft: 0,
 			},
 		}
@@ -203,7 +202,7 @@ func (s *SmartContract) QueryTrainBytrainnumber(ctx contractapi.TransactionConte
 			Code: 402,
 			Msg:  fmt.Sprintf("failed to read from world state: %v", err),
 			Data: Train{
-				TrainNumber:  0,
+				TrainNumber:  "0",
 				CarriageLeft: 0,
 			},
 		}
@@ -219,7 +218,7 @@ func (s *SmartContract) QueryTrainBytrainnumber(ctx contractapi.TransactionConte
 func (s *SmartContract) QueryAllTrains(ctx contractapi.TransactionContextInterface) TrainQueryResults {
 	var emptytrains []Train
 	emptytrains = append(emptytrains, Train{
-		TrainNumber:  0,
+		TrainNumber:  "0",
 		CarriageLeft: 0,
 	})
 
