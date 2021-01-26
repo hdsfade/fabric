@@ -141,7 +141,6 @@ func (s *SmartContract) CreateOrder(ctx contractapi.TransactionContextInterface,
 		}
 	}
 
-	value := []byte{0x00}
 	//create compositekey train~order
 	trainorderIndexKey, err := ctx.GetStub().CreateCompositeKey(
 		trainorderIndexName, []string{trainNumber, strconv.Itoa(orderId)})
@@ -151,7 +150,7 @@ func (s *SmartContract) CreateOrder(ctx contractapi.TransactionContextInterface,
 			Msg:  err.Error(),
 		}
 	}
-	err = ctx.GetStub().PutState(trainorderIndexKey, value)
+	err = ctx.GetStub().PutState(trainorderIndexKey, []byte(strconv.Itoa(orderId)))
 	if err != nil {
 		return Result{
 			Code: 402,

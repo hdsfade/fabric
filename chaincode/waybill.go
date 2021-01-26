@@ -24,16 +24,39 @@ type WayBill struct { //运单
 
 //WayBillExists judges a waybill if exists or not.
 func (s *SmartContract) WayBillExists(ctx contractapi.TransactionContextInterface, trainNumber string) (bool, error) {
-	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{trainNumber})
+	waybillIndexKey, err := ctx.GetStub().CreateCompositeKey(waybillIndexName, []string{trainNumber})
 	if err != nil {
 		return false, fmt.Errorf("failed to read from world state %v", err)
 	}
 
-	trainJSON, err := ctx.GetStub().GetState(trainIndexKey)
+	trainJSON, err := ctx.GetStub().GetState(waybillIndexKey)
 	if err != nil {
 		return false, fmt.Errorf("failed to read from world state %v", err)
 	}
 	return trainJSON != nil, nil
+}
+
+//type WayBillExistData struct {
+//	ISWayBillExist bool `json:"isWayBillExist"`
+//}
+//
+//type WayBillExistResult struct {
+//	wayBillExistData WayBillExistData `json:"data"`
+//}
+
+func (s *SmartContract) HasWayBill(ctx contractapi.TransactionContextInterface, trainNumber string) Result {
+	result, _ := s.WayBillExists(ctx, trainNumber)
+	if result {
+		return Result{
+			Code: 200,
+			Msg:  fmt.Sprintf("the waybill %s exists", trainNumber),
+		}
+	} else {
+		return Result{
+			Code: 402,
+			Msg:  fmt.Sprintf("the waybill %s does not exist", trainNumber),
+		}
+	}
 }
 
 ////CreateWayBill issues a new line to the world state with given details.

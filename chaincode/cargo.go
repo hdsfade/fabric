@@ -109,7 +109,27 @@ func (s *SmartContract) CreateCargo(ctx contractapi.TransactionContextInterface,
 				Msg:  err.Error(),
 			}
 		}
-		orderJSON := orderQueryResponse.Value
+		orderId := orderQueryResponse.Value
+		orderIndexKey, err := ctx.GetStub().CreateCompositeKey(orderIndexName, []string{string(orderId)})
+		if err != nil {
+			return Result{
+				Code: 402,
+				Msg:  err.Error(),
+			}
+		}
+		orderJSON, err := ctx.GetStub().GetState(orderIndexKey)
+		if err != nil {
+			return Result{
+				Code: 402,
+				Msg:  err.Error(),
+			}
+		}
+		if orderJSON == nil {
+			return Result{
+				Code: 402,
+				Msg:  fmt.Sprintf("the order %s does not exist", orderId),
+			}
+		}
 		err = json.Unmarshal(orderJSON, &order)
 		if err != nil {
 			return Result{
