@@ -22,6 +22,12 @@ type WayBill struct { //运单
 	CheckDescription  string   `json:"checkDescription"`
 }
 
+type WayBillQueryResult struct {
+	Code int     `json:"code"`
+	Msg  string  `json:"msg"`
+	Data WayBill `json:"data"`
+}
+
 //WayBillExists judges a waybill if exists or not.
 func (s *SmartContract) WayBillExists(ctx contractapi.TransactionContextInterface, trainNumber string) (bool, error) {
 	waybillIndexKey, err := ctx.GetStub().CreateCompositeKey(waybillIndexName, []string{trainNumber})
@@ -253,5 +259,81 @@ func (s *SmartContract) UpdateWayBill(ctx contractapi.TransactionContextInterfac
 	return Result{
 		Code: 200,
 		Msg:  "success",
+	}
+}
+
+//QueryWayBillBytrainnumber returns the waybill in the world state with given trainnumber
+func (s *SmartContract) QueryWayBillBytrainnumber(ctx contractapi.TransactionContextInterface, trainNumber string) WayBillQueryResult {
+	waybillIndexKey, err := ctx.GetStub().CreateCompositeKey(waybillIndexName, []string{trainNumber})
+	if err != nil {
+		return WayBillQueryResult{
+			Code: 402,
+			Msg:  err.Error(),
+			Data: WayBill{
+				TrainNumber:       " ",
+				WayStation:        []string{},
+				ArrivalTime:       []string{},
+				LeaveTime:         []string{},
+				Location:          0,
+				StationTrainState: false,
+				CheckDescription:  " ",
+			},
+		}
+	}
+
+	waybillJSON, err := ctx.GetStub().GetState(waybillIndexKey)
+	if err != nil {
+		return WayBillQueryResult{
+			Code: 402,
+			Msg:  err.Error(),
+			Data: WayBill{
+				TrainNumber:       " ",
+				WayStation:        []string{},
+				ArrivalTime:       []string{},
+				LeaveTime:         []string{},
+				Location:          0,
+				StationTrainState: false,
+				CheckDescription:  " ",
+			},
+		}
+	}
+	if waybillJSON == nil {
+		return WayBillQueryResult{
+			Code: 402,
+			Msg:  fmt.Sprintf("the waybill %s does not exist", trainNumber),
+			Data: WayBill{
+				TrainNumber:       " ",
+				WayStation:        []string{},
+				ArrivalTime:       []string{},
+				LeaveTime:         []string{},
+				Location:          0,
+				StationTrainState: false,
+				CheckDescription:  " ",
+			},
+		}
+	}
+
+	var waybill WayBill
+	err = json.Unmarshal(waybillJSON, &waybill)
+	if err != nil {
+		return WayBillQueryResult{
+			Code: 402,
+			Msg:  err.Error(),
+			Data: WayBill{
+				TrainNumber:       " ",
+				WayStation:        []string{},
+				ArrivalTime:       []string{},
+				LeaveTime:         []string{},
+				Location:          0,
+				StationTrainState: false,
+				CheckDescription:  " ",
+			},
+		}
+	}
+
+	return WayBillQueryResult{
+		Code: 200,
+		Msg:  "success",
+		Data: waybill,
 	}
 }
