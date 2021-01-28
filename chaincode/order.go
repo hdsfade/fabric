@@ -185,18 +185,42 @@ func (s *SmartContract) DeleteOrder(ctx contractapi.TransactionContextInterface,
 			Msg:  err.Error(),
 		}
 	}
-
-	exists, err := s.OrderExists(ctx, orderId)
+	orderJSON, err := ctx.GetStub().GetState(orderIndexKey)
 	if err != nil {
 		return Result{
 			Code: 402,
 			Msg:  err.Error(),
 		}
 	}
-	if !exists {
+	if orderJSON == nil {
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("the order %d does not exist", orderId),
+		}
+	}
+
+	var order Order
+	err = json.Unmarshal(orderJSON, &order)
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	//delete train~order
+	trainorderIndexKey, err := ctx.GetStub().CreateCompositeKey(
+		trainorderIndexName, []string{order.TrainNumber, strconv.Itoa(orderId)})
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	err = ctx.GetStub().DelState(trainorderIndexKey)
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
 		}
 	}
 
@@ -207,6 +231,7 @@ func (s *SmartContract) DeleteOrder(ctx contractapi.TransactionContextInterface,
 			Msg:  err.Error(),
 		}
 	}
+
 	return Result{
 		Code: 200,
 		Msg:  "success",
@@ -215,14 +240,14 @@ func (s *SmartContract) DeleteOrder(ctx contractapi.TransactionContextInterface,
 
 //UpdateOrder updates an existing order in the world state with provided parameters
 func (s *SmartContract) UpdateOrder(ctx contractapi.TransactionContextInterface, orderId int, checkRsult bool, checkDescription string) Result {
-	orderIndexkey, err := ctx.GetStub().CreateCompositeKey(orderIndexName, []string{strconv.Itoa(orderId)})
+	orderIndexKey, err := ctx.GetStub().CreateCompositeKey(orderIndexName, []string{strconv.Itoa(orderId)})
 	if err != nil {
 		return Result{
 			Code: 402,
 			Msg:  err.Error(),
 		}
 	}
-	orderJSON, err := ctx.GetStub().GetState(orderIndexkey)
+	orderJSON, err := ctx.GetStub().GetState(orderIndexKey)
 	if err != nil {
 		return Result{
 			Code: 402,
@@ -254,7 +279,7 @@ func (s *SmartContract) UpdateOrder(ctx contractapi.TransactionContextInterface,
 			Msg:  err.Error(),
 		}
 	}
-	err = ctx.GetStub().PutState(orderIndexkey, orderJSON)
+	err = ctx.GetStub().PutState(orderIndexKey, orderJSON)
 	if err != nil {
 		return Result{
 			Code: 402,
