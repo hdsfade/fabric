@@ -254,9 +254,9 @@ func (s *SmartContract) UpdateWayBill(ctx contractapi.TransactionContextInterfac
 
 	//overwriting original details
 	if arrivalTime == "" {
-		waybill.ArrivalTime = append(waybill.ArrivalTime, arrivalTime)
+		waybill.LeaveTime = append(waybill.LeaveTime, arrivalTime)
 	} else if leaveTime == "" {
-		waybill.LeaveTime = append(waybill.LeaveTime, leaveTime)
+		waybill.ArrivalTime = append(waybill.ArrivalTime, leaveTime)
 	}
 	waybill.Location = location
 	waybill.StationTrainState = stationTrainState
