@@ -207,6 +207,13 @@ func (s *SmartContract) DeleteOrder(ctx contractapi.TransactionContextInterface,
 			Msg:  err.Error(),
 		}
 	}
+
+	//recover train's carriageNumber
+	updateTrainResult := s.UpdateTrain(ctx, order.TrainNumber, -order.CarriageNumber)
+	if updateTrainResult.Code != 200 {
+		return updateTrainResult
+	}
+
 	//delete train~order
 	trainorderIndexKey, err := ctx.GetStub().CreateCompositeKey(
 		trainorderIndexName, []string{order.TrainNumber, strconv.Itoa(orderId)})

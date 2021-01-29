@@ -137,12 +137,13 @@ func (s *SmartContract) CreateCargo(ctx contractapi.TransactionContextInterface,
 				Msg:  err.Error(),
 			}
 		}
-
-		cargo.TotalTypeNum += order.TotalTypeNum
-		cargo.CargoType = append(cargo.CargoType, order.CargoType...)
-		cargo.GoodsNum = append(cargo.GoodsNum, order.GoodsNum...)
-		cargo.GoodsName = append(cargo.GoodsName, order.GoodsName...)
-		cargo.GoodsOrderId = append(cargo.GoodsOrderId, order.OrderId)
+		if order.CheckResult {
+			cargo.TotalTypeNum += order.TotalTypeNum
+			cargo.CargoType = append(cargo.CargoType, order.CargoType...)
+			cargo.GoodsNum = append(cargo.GoodsNum, order.GoodsNum...)
+			cargo.GoodsName = append(cargo.GoodsName, order.GoodsName...)
+			cargo.GoodsOrderId = append(cargo.GoodsOrderId, order.OrderId)
+		}
 	}
 	cargoJSON, err := json.Marshal(cargo)
 	if err != nil {
@@ -160,6 +161,36 @@ func (s *SmartContract) CreateCargo(ctx contractapi.TransactionContextInterface,
 		}
 	}
 
+	return Result{
+		Code: 200,
+		Msg:  "success",
+	}
+}
+
+//DeleteCargo deletes a cargo by trainNumber from the world state.
+func (s *SmartContract) DeleteCargo(ctx contractapi.TransactionContextInterface, trainNumber string) Result {
+	trainIndexKey, err := ctx.GetStub().CreateCompositeKey(trainIndexName, []string{trainNumber})
+	exists, err := s.CargoExists(ctx, trainNumber)
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
+	if !exists {
+		return Result{
+			Code: 402,
+			Msg:  fmt.Sprintf("the cargo %s does not exist", trainNumber),
+		}
+	}
+
+	err = ctx.GetStub().DelState(trainIndexKey)
+	if err != nil {
+		return Result{
+			Code: 402,
+			Msg:  err.Error(),
+		}
+	}
 	return Result{
 		Code: 200,
 		Msg:  "success",

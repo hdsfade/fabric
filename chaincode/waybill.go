@@ -67,8 +67,13 @@ func (s *SmartContract) HasWayBill(ctx contractapi.TransactionContextInterface, 
 
 ////CreateWayBill issues a new line to the world state with given details.
 func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterface, trainNumber string) Result {
+	createCargoResult := s.CreateCargo(ctx, trainNumber)
+	if createCargoResult.Code != 200 {
+		return createCargoResult
+	}
 	waybillIndexKey, err := ctx.GetStub().CreateCompositeKey(waybillIndexName, []string{trainNumber})
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  err.Error(),
@@ -77,12 +82,14 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 
 	exists, err := s.WayBillExists(ctx, trainNumber)
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  err.Error(),
 		}
 	}
 	if exists {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("the waybill %s already exists", trainNumber),
@@ -91,12 +98,14 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 
 	exists, err = s.TrainExists(ctx, trainNumber)
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  err.Error(),
 		}
 	}
 	if !exists {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("the train %s does not exist", trainNumber),
@@ -105,6 +114,7 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 
 	scheduleNumber, err := strconv.Atoi(trainNumber[8:12])
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("trainNumber error: %v", err),
@@ -112,6 +122,7 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 	}
 	scheduleIndexKey, err := ctx.GetStub().CreateCompositeKey(scheduleIndexName, []string{strconv.Itoa(scheduleNumber)})
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("failed to read schedule %d from world state: %v", scheduleNumber, err),
@@ -119,12 +130,14 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 	}
 	scheduleJSON, err := ctx.GetStub().GetState(scheduleIndexKey)
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("failed to read schedule %d from world state: %v", scheduleNumber, err),
 		}
 	}
 	if scheduleJSON == nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("the schedule %d does not exist", scheduleNumber),
@@ -133,6 +146,7 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 	var schedule Schedule
 	err = json.Unmarshal(scheduleJSON, &schedule)
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  err.Error(),
@@ -141,6 +155,7 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 
 	lineIndexKey, err := ctx.GetStub().CreateCompositeKey(lineIndexName, []string{strconv.Itoa(schedule.LineNumber)})
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("failed to read schedule %d's line %d from world state: %v", scheduleNumber, schedule.LineNumber, err),
@@ -148,12 +163,14 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 	}
 	lineJSON, err := ctx.GetStub().GetState(lineIndexKey)
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("failed to read schedule %d's line %d from world state: %v", scheduleNumber, schedule.LineNumber, err),
 		}
 	}
 	if lineJSON == nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  fmt.Sprintf("the schedule %d's line %d does not exist", scheduleNumber, schedule.LineNumber),
@@ -162,6 +179,7 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 	var line Line
 	err = json.Unmarshal(lineJSON, &line)
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  err.Error(),
@@ -179,6 +197,7 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 	}
 	wayBillJSON, err := json.Marshal(wayBill)
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  err.Error(),
@@ -187,6 +206,7 @@ func (s *SmartContract) CreateWayBill(ctx contractapi.TransactionContextInterfac
 
 	err = ctx.GetStub().PutState(waybillIndexKey, wayBillJSON)
 	if err != nil {
+		s.DeleteCargo(ctx, trainNumber)
 		return Result{
 			Code: 402,
 			Msg:  err.Error(),
