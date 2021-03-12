@@ -23,9 +23,10 @@ type Lines struct {
 
 //LineQueryResult structure used for handing result of query
 type LineQueryResult struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-	Data Line   `json:"data"`
+	Code    int      `json:"code"`
+	Msg     string   `json:"msg"`
+	Data    Line     `json:"data"`
+	SubData Stations `json:"subData"`
 }
 
 //LineQueryResults structure used for handing result of queryAll
@@ -246,6 +247,14 @@ func (s *SmartContract) QueryLineBylinenumber(ctx contractapi.TransactionContext
 				WayStationType: []string{},
 				Using:          false,
 			},
+			SubData: Stations{StationsData: []Station{
+				{
+					StationName: " ",
+					Country:     " ",
+					Using:       false,
+					Describtion: " ",
+				},
+			}},
 		}
 	}
 
@@ -260,18 +269,34 @@ func (s *SmartContract) QueryLineBylinenumber(ctx contractapi.TransactionContext
 				WayStationType: []string{},
 				Using:          false,
 			},
+			SubData: Stations{StationsData: []Station{
+				{
+					StationName: " ",
+					Country:     " ",
+					Using:       false,
+					Describtion: " ",
+				},
+			}},
 		}
 	}
 	if lineJSON == nil {
 		return LineQueryResult{
 			Code: 402,
-			Msg:  fmt.Sprintf("the line %d does not exist", lineNumber),
+			Msg:  fmt.Sprintf("the line %d doesnto exist", lineNumber),
 			Data: Line{
 				LineNumber:     0,
 				WayStation:     []string{},
 				WayStationType: []string{},
 				Using:          false,
 			},
+			SubData: Stations{StationsData: []Station{
+				{
+					StationName: " ",
+					Country:     " ",
+					Using:       false,
+					Describtion: " ",
+				},
+			}},
 		}
 	}
 
@@ -280,19 +305,107 @@ func (s *SmartContract) QueryLineBylinenumber(ctx contractapi.TransactionContext
 	if err != nil {
 		return LineQueryResult{
 			Code: 402,
-			Msg:  err.Error(),
+			Msg:  fmt.Sprintf("failed to read from world state: %v", err),
 			Data: Line{
 				LineNumber:     0,
 				WayStation:     []string{},
 				WayStationType: []string{},
 				Using:          false,
 			},
+			SubData: Stations{StationsData: []Station{
+				{
+					StationName: " ",
+					Country:     " ",
+					Using:       false,
+					Describtion: " ",
+				},
+			}},
 		}
 	}
+
+	var stations []Station
+	for _, stationName := range line.WayStation {
+		stationIndexKey, err := ctx.GetStub().CreateCompositeKey(stationIndexName, []string{stationName})
+		if err != nil {
+			return LineQueryResult{
+				Code: 402,
+				Msg:  fmt.Sprintf("failed to read from world state: %v", err),
+				Data: Line{
+					LineNumber:     0,
+					WayStation:     []string{},
+					WayStationType: []string{},
+					Using:          false,
+				},
+				SubData: Stations{StationsData: []Station{
+					{
+						StationName: " ",
+						Country:     " ",
+						Using:       false,
+						Describtion: " ",
+					},
+				}},
+			}
+		}
+
+		stationJSON, err := ctx.GetStub().GetState(stationIndexKey)
+		if err != nil {
+			return LineQueryResult{
+				Code: 402,
+				Msg:  fmt.Sprintf("failed to read from world state: %v", err),
+				Data: Line{
+					LineNumber:     0,
+					WayStation:     []string{},
+					WayStationType: []string{},
+					Using:          false,
+				},
+				SubData: Stations{StationsData: []Station{
+					{
+						StationName: " ",
+						Country:     " ",
+						Using:       false,
+						Describtion: " ",
+					},
+				}},
+			}
+		}
+		var station Station
+		err = json.Unmarshal(stationJSON, &station)
+		if err != nil {
+			return LineQueryResult{
+				Code: 402,
+				Msg:  fmt.Sprintf("failed to read from world state: %v", err),
+				Data: Line{
+					LineNumber:     0,
+					WayStation:     []string{},
+					WayStationType: []string{},
+					Using:          false,
+				},
+				SubData: Stations{StationsData: []Station{
+					{
+						StationName: " ",
+						Country:     " ",
+						Using:       false,
+						Describtion: " ",
+					},
+				}},
+			}
+		}
+		stations = append(stations, station)
+	}
+
+	if stations == nil
+		stations = append(stations, Station{
+			StationName: " ",
+			Country:     " ",
+			Using:       false,
+			Describtion: " ",
+		})
+	}
 	return LineQueryResult{
-		Code: 200,
-		Msg:  "success",
-		Data: line,
+		Code:    200,
+		Msg:     "success",
+		Data:    line,
+		SubData: Stations{StationsData: stations},
 	}
 }
 
