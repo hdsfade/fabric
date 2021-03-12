@@ -393,7 +393,7 @@ func (s *SmartContract) QueryLineBylinenumber(ctx contractapi.TransactionContext
 		stations = append(stations, station)
 	}
 
-	if stations == nil
+	if stations == nil {
 		stations = append(stations, Station{
 			StationName: " ",
 			Country:     " ",
